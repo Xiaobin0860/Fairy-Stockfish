@@ -62,9 +62,19 @@ namespace {
   enum NodeType { NonPV, PV };
 
   // Razor and futility margins
-  constexpr int RazorMargin = 661;
+  int RazorMargin = 661;
+  int margin[] = { 198, 128, 111, 176 };
+  int window = 21;
+  int nmp_margin = 835;
+  int probcut_margin = 191;
+  int see_margin = 199;
+  TUNE(SetRange(1, 3000), RazorMargin,
+       SetRange(1, 500), margin, probcut_margin, see_margin,
+       SetRange(1, 100), window,
+       SetRange(1, 2000), nmp_margin);
+
   Value futility_margin(Depth d, bool improving) {
-    return Value(198 * (d - improving));
+    return Value(margin[0] * (d - improving));
   }
 
   // Reductions lookup table, initialized at startup
@@ -432,12 +442,12 @@ void Thread::search() {
           if (rootDepth >= 4)
           {
               Value previousScore = rootMoves[pvIdx].previousScore;
-              delta = Value(21 * (1 + rootPos.captures_to_hand()) + abs(previousScore) / 128);
+              delta = Value(window * (1 + rootPos.captures_to_hand()) + abs(previousScore) / margin[1]);
               alpha = std::max(previousScore - delta,-VALUE_INFINITE);
               beta  = std::min(previousScore + delta, VALUE_INFINITE);
 
               // Adjust contempt based on root move's previousScore (dynamic contempt)
-              int dct = ct + (111 - ct / 2) * previousScore / (abs(previousScore) + 176);
+              int dct = ct + (margin[2] - ct / 2) * previousScore / (abs(previousScore) + margin[3]);
 
               contempt = (us == WHITE ?  make_score(dct, dct / 2)
                                       : -make_score(dct, dct / 2));
@@ -849,7 +859,7 @@ namespace {
         assert(eval - beta >= 0);
 
         // Null move dynamic reduction based on depth and value
-        Depth R = (835 - 150 * !pos.checking_permitted() + 70 * depth) / 256 + std::min(int(eval - beta) / 185, 3);
+        Depth R = (nmp_margin - 150 * !pos.checking_permitted() + 70 * depth) / 256 + std::min(int(eval - beta) / 185, 3);
 
         ss->currentMove = MOVE_NULL;
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
@@ -893,7 +903,7 @@ namespace {
         &&  (pos.pieces() ^ pos.pieces(CLOBBER_PIECE))
         &&  abs(beta) < VALUE_MATE_IN_MAX_PLY)
     {
-        Value raisedBeta = std::min(beta + 191 * (1 + pos.check_counting() + (pos.extinction_value() != VALUE_NONE)) - 46 * improving, VALUE_INFINITE);
+        Value raisedBeta = std::min(beta + probcut_margin * (1 + pos.check_counting() + (pos.extinction_value() != VALUE_NONE)) - 46 * improving, VALUE_INFINITE);
         MovePicker mp(pos, ttMove, raisedBeta - ss->staticEval, &thisThread->captureHistory);
         int probCutCount = 0;
 
@@ -1031,7 +1041,7 @@ moves_loop: // When in check, search starts from here
           }
           else if (  !(givesCheck && extension)
                    && !pos.must_capture()
-                   && !pos.see_ge(move, Value(-199 - 120 * pos.captures_to_hand()) * depth)) // (~20 Elo)
+                   && !pos.see_ge(move, Value(-see_margin - 120 * pos.captures_to_hand()) * depth)) // (~20 Elo)
                   continue;
       }
 
