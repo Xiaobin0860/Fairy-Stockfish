@@ -131,6 +131,7 @@ Variant* VariantParser::parse(Variant* v) {
     const auto& it_prom = config.find("promotionPieceTypes");
     if (it_prom != config.end())
     {
+        v->promotionPieceTypes = {};
         char token;
         size_t idx;
         std::stringstream ss(it_prom->second);
