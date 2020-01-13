@@ -104,7 +104,7 @@ if(WIN32)
 
 else()
 
-target_link_libraries(Gateway
+target_link_libraries(stockfish
     pthread
 )
 
