@@ -1,3 +1,7 @@
 stockfish
 *.o
 .depend
+@bin
+@lib
+build
+.vscode
