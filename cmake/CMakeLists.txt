@@ -60,6 +60,10 @@ link_directories(
     ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
 )
 
+add_definitions(
+    -DLARGEBOARDS
+)
+
 
 if(WIN32)
 
