@@ -1,6 +1,6 @@
 /*
   Fairy-Stockfish, a UCI chess variant playing engine derived from Stockfish
-  Copyright (C) 2018-2019 Fabian Fichter
+  Copyright (C) 2018-2020 Fabian Fichter
 
   Fairy-Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -85,6 +85,7 @@ struct Variant {
   bool gating = false;
   bool seirawanGating = false;
   bool cambodianMoves = false;
+  bool makpongRule = false;
   bool flyingGeneral = false;
   bool xiangqiSoldier = false;
   // game end
@@ -136,7 +137,7 @@ struct Variant {
 class VariantMap : public std::map<std::string, const Variant*> {
 public:
   void init();
-  void parse(std::string path);
+  template <bool DoCheck> void parse(std::string path);
   void clear_all();
   std::vector<std::string> get_keys();
 

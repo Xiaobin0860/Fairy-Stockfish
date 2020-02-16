@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2019 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2020 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -52,7 +52,6 @@ struct StateInfo {
   Bitboard gatesBB[COLOR_NB];
 
   // Not copied when making a move (will be recomputed anyhow)
-  int repetition;
   Key        key;
   Bitboard   checkersBB;
   Piece      capturedPiece;
@@ -63,6 +62,7 @@ struct StateInfo {
   Bitboard   checkSquares[PIECE_TYPE_NB];
   bool       capturedpromoted;
   bool       shak;
+  int        repetition;
 };
 
 /// A list to keep track of the position states along the setup moves (from the
@@ -89,7 +89,7 @@ public:
   // FEN string input/output
   Position& set(const Variant* v, const std::string& fenStr, bool isChess960, StateInfo* si, Thread* th, bool sfen = false);
   Position& set(const std::string& code, Color c, StateInfo* si);
-  const std::string fen(bool sfen = false, std::string holdings = "-") const;
+  const std::string fen(bool sfen = false, bool showPromoted = false, std::string holdings = "-") const;
 
   // Variant rule properties
   const Variant* variant() const;
@@ -264,7 +264,7 @@ private:
   void set_check_info(StateInfo* si) const;
 
   // Other helpers
-  void put_piece(Piece pc, Square s);
+  void put_piece(Piece pc, Square s, bool isPromoted = false, Piece unpromotedPc = NO_PIECE);
   void remove_piece(Piece pc, Square s);
   void move_piece(Piece pc, Square from, Square to);
   template<bool Do>
@@ -787,16 +787,20 @@ inline int Position::castling_rights(Color c) const {
 }
 
 inline bool Position::castling_impeded(CastlingRights cr) const {
+  assert(cr == WHITE_OO || cr == WHITE_OOO || cr == BLACK_OO || cr == BLACK_OOO);
+
   return byTypeBB[ALL_PIECES] & castlingPath[cr];
 }
 
 inline Square Position::castling_rook_square(CastlingRights cr) const {
+  assert(cr == WHITE_OO || cr == WHITE_OOO || cr == BLACK_OO || cr == BLACK_OOO);
+
   return castlingRookSquare[cr];
 }
 
 template<PieceType Pt>
 inline Bitboard Position::attacks_from(Square s, Color c) const {
-  return attacks_bb(c, Pt, s, byTypeBB[ALL_PIECES]) & board_bb(c, Pt);
+  return attacks_bb(c, Pt == KING ? king_type() : Pt, s, byTypeBB[ALL_PIECES]) & board_bb(c, Pt);
 }
 
 inline Bitboard Position::attacks_from(Color c, PieceType pt, Square s) const {
@@ -909,7 +913,7 @@ inline Thread* Position::this_thread() const {
   return thisThread;
 }
 
-inline void Position::put_piece(Piece pc, Square s) {
+inline void Position::put_piece(Piece pc, Square s, bool isPromoted, Piece unpromotedPc) {
 
   board[s] = pc;
   byTypeBB[ALL_PIECES] |= s;
@@ -919,6 +923,9 @@ inline void Position::put_piece(Piece pc, Square s) {
   pieceList[pc][index[s]] = s;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
   psq += PSQT::psq[pc][s];
+  if (isPromoted)
+      promotedPieces |= s;
+  unpromotedBoard[s] = unpromotedPc;
 }
 
 inline void Position::remove_piece(Piece pc, Square s) {
@@ -937,6 +944,8 @@ inline void Position::remove_piece(Piece pc, Square s) {
   pieceList[pc][pieceCount[pc]] = SQ_NONE;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
   psq -= PSQT::psq[pc][s];
+  promotedPieces -= s;
+  unpromotedBoard[s] = NO_PIECE;
 }
 
 inline void Position::move_piece(Piece pc, Square from, Square to) {
@@ -952,6 +961,10 @@ inline void Position::move_piece(Piece pc, Square from, Square to) {
   index[to] = index[from];
   pieceList[pc][index[to]] = to;
   psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
+  if (is_promoted(from))
+      promotedPieces ^= fromTo;
+  unpromotedBoard[to] = unpromotedBoard[from];
+  unpromotedBoard[from] = NO_PIECE;
 }
 
 inline void Position::do_move(Move m, StateInfo& newSt) {
@@ -976,7 +989,7 @@ inline void Position::remove_from_hand(Piece pc) {
 
 inline void Position::drop_piece(Piece pc_hand, Piece pc_drop, Square s) {
   assert(pieceCountInHand[color_of(pc_hand)][type_of(pc_hand)]);
-  put_piece(pc_drop, s);
+  put_piece(pc_drop, s, pc_drop != pc_hand, pc_drop != pc_hand ? pc_hand : NO_PIECE);
   remove_from_hand(pc_hand);
 }
 

@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2019 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2020 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -142,6 +142,15 @@ namespace {
         else if (token == "opptime")   is >> limits.time[~pos.side_to_move()];
         else if (token == "increment") is >> limits.inc[pos.side_to_move()];
         else if (token == "oppinc")    is >> limits.inc[~pos.side_to_move()];
+        // USI commands
+        else if (token == "byoyomi")
+        {
+            int byoyomi = 0;
+            is >> byoyomi;
+            limits.inc[WHITE] = limits.inc[BLACK] = byoyomi;
+            limits.time[WHITE] += byoyomi;
+            limits.time[BLACK] += byoyomi;
+        }
 
     Threads.start_thinking(pos, states, limits, ponderMode);
   }
@@ -156,7 +165,7 @@ namespace {
     uint64_t num, nodes = 0, cnt = 1;
 
     vector<string> list = setup_bench(pos, args);
-    num = count_if(list.begin(), list.end(), [](string s) { return s.find("go ") == 0; });
+    num = count_if(list.begin(), list.end(), [](string s) { return s.find("go ") == 0 || s.find("eval") == 0; });
 
     TimePoint elapsed = now();
 
@@ -165,12 +174,17 @@ namespace {
         istringstream is(cmd);
         is >> skipws >> token;
 
-        if (token == "go")
+        if (token == "go" || token == "eval")
         {
             cerr << "\nPosition: " << cnt++ << '/' << num << endl;
-            go(pos, is, states);
-            Threads.main()->wait_for_search_finished();
-            nodes += Threads.nodes_searched();
+            if (token == "go")
+            {
+               go(pos, is, states);
+               Threads.main()->wait_for_search_finished();
+               nodes += Threads.nodes_searched();
+            }
+            else
+               sync_cout << "\n" << Eval::trace(pos) << sync_endl;
         }
         else if (token == "setoption")  setoption(is);
         else if (token == "position")   position(pos, is, states);
@@ -195,6 +209,16 @@ namespace {
     string token;
     while (is >> token)
         Options["VariantPath"] = token;
+  }
+
+  // check() is called when engine receives the "check" command.
+  // The function reads variant configuration files and validates them.
+
+  void check(istringstream& is) {
+
+    string token;
+    while (is >> token)
+        variants.parse<true>(token);
   }
 
 } // namespace
@@ -271,11 +295,13 @@ void UCI::loop(int argc, char* argv[]) {
 
       // Additional custom non-UCI commands, mainly for debugging.
       // Do not use these commands during a search!
-      else if (token == "flip")  pos.flip();
-      else if (token == "bench") bench(pos, is, states);
-      else if (token == "d")     sync_cout << pos << sync_endl;
-      else if (token == "eval")  sync_cout << Eval::trace(pos) << sync_endl;
-      else if (token == "load")  { load(is); argc = 1; } // continue reading stdin
+      else if (token == "flip")     pos.flip();
+      else if (token == "bench")    bench(pos, is, states);
+      else if (token == "d")        sync_cout << pos << sync_endl;
+      else if (token == "eval")     sync_cout << Eval::trace(pos) << sync_endl;
+      else if (token == "compiler") sync_cout << compiler_info() << sync_endl;
+      else if (token == "load")     { load(is); argc = 1; } // continue reading stdin
+      else if (token == "check")    check(is);
       else
           sync_cout << "Unknown command: " << cmd << sync_endl;
 
@@ -360,7 +386,7 @@ string UCI::move(const Position& pos, Move m) {
   Square to = to_sq(m);
 
   if (m == MOVE_NONE)
-      return "(none)";
+      return Options["Protocol"] == "usi" ? "resign" : "(none)";
 
   if (m == MOVE_NULL)
       return "0000";
