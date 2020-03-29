@@ -62,6 +62,8 @@ link_directories(
 
 add_definitions(
     -DLARGEBOARDS
+    -DPRECOMPUTED_MAGICS
+    -DIS_64BIT
 )
 
 
