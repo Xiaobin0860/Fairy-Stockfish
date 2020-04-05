@@ -241,6 +241,9 @@ Variant* VariantParser<DoCheck>::parse(Variant* v) {
     parse_attribute("gating", v->gating);
     parse_attribute("seirawanGating", v->seirawanGating);
     parse_attribute("cambodianMoves", v->cambodianMoves);
+    parse_attribute("diagonalLines", v->diagonalLines);
+    parse_attribute("kingPass", v->kingPass);
+    parse_attribute("kingPassOnStalemate", v->kingPassOnStalemate);
     parse_attribute("makpongRule", v->makpongRule);
     parse_attribute("flyingGeneral", v->flyingGeneral);
     parse_attribute("xiangqiSoldier", v->xiangqiSoldier);
@@ -254,6 +257,7 @@ Variant* VariantParser<DoCheck>::parse(Variant* v) {
     parse_attribute("checkmateValue", v->checkmateValue);
     parse_attribute("shogiPawnDropMateIllegal", v->shogiPawnDropMateIllegal);
     parse_attribute("shatarMateRule", v->shatarMateRule);
+    parse_attribute("bikjangRule", v->bikjangRule);
     parse_attribute("bareKingValue", v->bareKingValue);
     parse_attribute("extinctionValue", v->extinctionValue);
     parse_attribute("bareKingMove", v->bareKingMove);

@@ -86,6 +86,9 @@ struct Variant {
   bool gating = false;
   bool seirawanGating = false;
   bool cambodianMoves = false;
+  Bitboard diagonalLines = 0;
+  bool kingPass = false;
+  bool kingPassOnStalemate = false;
   bool makpongRule = false;
   bool flyingGeneral = false;
   bool xiangqiSoldier = false;
@@ -100,6 +103,7 @@ struct Variant {
   Value checkmateValue = -VALUE_MATE;
   bool shogiPawnDropMateIllegal = false;
   bool shatarMateRule = false;
+  bool bikjangRule = false;
   Value bareKingValue = VALUE_NONE;
   Value extinctionValue = VALUE_NONE;
   bool bareKingMove = false;

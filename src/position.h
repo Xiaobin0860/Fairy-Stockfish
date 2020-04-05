@@ -62,6 +62,7 @@ struct StateInfo {
   Bitboard   checkSquares[PIECE_TYPE_NB];
   bool       capturedpromoted;
   bool       shak;
+  bool       bikjang;
   int        repetition;
 };
 
@@ -140,6 +141,9 @@ public:
   bool gating() const;
   bool seirawan_gating() const;
   bool cambodian_moves() const;
+  Bitboard diagonal_lines() const;
+  bool king_pass() const;
+  bool king_pass_on_stalemate() const;
   bool unpromoted_soldier(Color c, Square s) const;
   bool makpong() const;
   // winning conditions
@@ -164,6 +168,7 @@ public:
   // Variant-specific properties
   int count_in_hand(Color c, PieceType pt) const;
   int count_with_hand(Color c, PieceType pt) const;
+  bool bikjang() const;
 
   // Position representation
   Bitboard pieces() const;
@@ -203,6 +208,7 @@ public:
   Bitboard attackers_to(Square s, Color c) const;
   Bitboard attackers_to(Square s, Bitboard occupied) const;
   Bitboard attackers_to(Square s, Bitboard occupied, Color c) const;
+  Bitboard attackers_to(Square s, Bitboard occupied, Color c, Bitboard janggiCannons) const;
   Bitboard attacks_from(Color c, PieceType pt, Square s) const;
   template<PieceType> Bitboard attacks_from(Square s, Color c) const;
   Bitboard moves_from(Color c, PieceType pt, Square s) const;
@@ -569,6 +575,21 @@ inline bool Position::cambodian_moves() const {
   return var->cambodianMoves;
 }
 
+inline Bitboard Position::diagonal_lines() const {
+  assert(var != nullptr);
+  return var->diagonalLines;
+}
+
+inline bool Position::king_pass() const {
+  assert(var != nullptr);
+  return var->kingPass || var->kingPassOnStalemate;
+}
+
+inline bool Position::king_pass_on_stalemate() const {
+  assert(var != nullptr);
+  return var->kingPassOnStalemate;
+}
+
 inline bool Position::unpromoted_soldier(Color c, Square s) const {
   assert(var != nullptr);
   return var->xiangqiSoldier && relative_rank(c, s, var->maxRank) <= RANK_5;
@@ -838,6 +859,10 @@ inline Bitboard Position::attackers_to(Square s, Color c) const {
   return attackers_to(s, byTypeBB[ALL_PIECES], c);
 }
 
+inline Bitboard Position::attackers_to(Square s, Bitboard occupied, Color c) const {
+  return attackers_to(s, occupied, c, byTypeBB[JANGGI_CANNON]);
+}
+
 inline Bitboard Position::checkers() const {
   return st->checkersBB;
 }
@@ -921,7 +946,7 @@ inline bool Position::capture_or_promotion(Move m) const {
 inline bool Position::capture(Move m) const {
   assert(is_ok(m));
   // Castling is encoded as "king captures rook"
-  return (!empty(to_sq(m)) && type_of(m) != CASTLING) || type_of(m) == ENPASSANT;
+  return (!empty(to_sq(m)) && type_of(m) != CASTLING && from_sq(m) != to_sq(m)) || type_of(m) == ENPASSANT;
 }
 
 inline Piece Position::captured_piece() const {
@@ -996,6 +1021,10 @@ inline int Position::count_in_hand(Color c, PieceType pt) const {
 
 inline int Position::count_with_hand(Color c, PieceType pt) const {
   return pieceCount[make_piece(c, pt)] + pieceCountInHand[c][pt];
+}
+
+inline bool Position::bikjang() const {
+  return st->bikjang;
 }
 
 inline void Position::add_to_hand(Piece pc) {

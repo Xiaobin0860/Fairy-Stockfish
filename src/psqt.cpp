@@ -30,14 +30,14 @@ Value PieceValue[PHASE_NB][PIECE_NB] = {
     ArchbishopValueMg, ChancellorValueMg, AmazonValueMg, KnibisValueMg, BiskniValueMg, KnirooValueMg, RookniValueMg,
     ShogiPawnValueMg, LanceValueMg, ShogiKnightValueMg, EuroShogiKnightValueMg, GoldValueMg, DragonHorseValueMg,
     ClobberPieceValueMg, BreakthroughPieceValueMg, ImmobilePieceValueMg,
-    CannonPieceValueMg, SoldierValueMg, HorseValueMg, ElephantValueMg, BannerValueMg,
+    CannonPieceValueMg, JanggiCannonPieceValueMg, SoldierValueMg, HorseValueMg, ElephantValueMg, JanggiElephantValueMg, BannerValueMg,
     WazirValueMg, CommonerValueMg, CentaurValueMg },
   { VALUE_ZERO, PawnValueEg, KnightValueEg, BishopValueEg, RookValueEg, QueenValueEg,
     FersValueEg, AlfilValueEg, FersAlfilValueEg, SilverValueEg, AiwokValueEg, BersValueEg,
     ArchbishopValueMg, ChancellorValueEg, AmazonValueEg, KnibisValueMg, BiskniValueMg, KnirooValueEg, RookniValueEg,
     ShogiPawnValueEg, LanceValueEg, ShogiKnightValueEg, EuroShogiKnightValueEg, GoldValueEg, DragonHorseValueEg,
     ClobberPieceValueEg, BreakthroughPieceValueEg, ImmobilePieceValueEg,
-    CannonPieceValueEg, SoldierValueEg, HorseValueEg, ElephantValueEg, BannerValueEg,
+    CannonPieceValueEg, JanggiCannonPieceValueEg, SoldierValueEg, HorseValueEg, ElephantValueEg, JanggiElephantValueEg, BannerValueEg,
     WazirValueEg, CommonerValueEg, CentaurValueEg }
 };
 
@@ -151,6 +151,15 @@ void init(const Variant* v) {
           int slider = pi->sliderQuiet.size() + pi->sliderCapture.size();
           score = make_score(mg_value(score) * (lc * leaper + r1 * slider) / (lc * leaper + r0 * slider),
                              eg_value(score) * (lc * leaper + r1 * slider) / (lc * leaper + r0 * slider));
+      }
+
+      // Increase leapers' value in makpong
+      if (v->makpongRule)
+      {
+          if (std::any_of(pi->stepsCapture.begin(), pi->stepsCapture.end(), [](Direction d) { return dist(d) > 1; })
+                  && !pi->lameLeaper)
+              score = make_score(mg_value(score) * 4200 / (3500 + mg_value(score)),
+                                 eg_value(score) * 4700 / (3500 + mg_value(score)));
       }
 
       // For drop variants, halve the piece values

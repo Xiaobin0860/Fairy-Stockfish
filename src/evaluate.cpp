@@ -300,6 +300,18 @@ namespace {
           : Pt ==   ROOK ? attacks_bb<  ROOK>(s, pos.pieces() ^ pos.pieces(QUEEN) ^ pos.pieces(Us, ROOK))
                          : pos.attacks_from(Us, Pt, s);
 
+        // Janggi palace moves
+        if (pos.diagonal_lines() & s)
+        {
+            PieceType diagType = Pt == WAZIR ? FERS : Pt == SOLDIER ? PAWN : Pt == ROOK ? BISHOP : NO_PIECE_TYPE;
+            if (diagType)
+                b |= attacks_bb(Us, diagType, s, pos.pieces()) & pos.board_bb(Us, Pt) & pos.diagonal_lines();
+            else if (Pt == JANGGI_CANNON)
+                // TODO: fix for longer diagonals
+                b |= attacks_bb(Us, ALFIL, s, pos.pieces()) & ~attacks_bb(Us, ELEPHANT, s, pos.pieces() ^ pos.pieces(JANGGI_CANNON))
+                    & pos.board_bb(Us, Pt) & pos.diagonal_lines();
+        }
+
         // Restrict mobility to actual squares of board
         b &= pos.board_bb();
 
@@ -307,6 +319,12 @@ namespace {
         {
             b &= file_bb(s);
             score -= make_score(PieceValue[MG][Pt], PieceValue[EG][Pt]) / 3;
+        }
+
+        if (Pt == JANGGI_CANNON)
+        {
+            b &= ~pos.pieces(Pt);
+            b &= attacks_bb(Us, Pt, s, pos.pieces() ^ pos.pieces(Pt));
         }
 
         if (pos.blockers_for_king(Us) & s)
@@ -572,7 +590,8 @@ namespace {
                  +  69 * kingAttacksCount[Them] * (2 + 8 * pos.check_counting() + pos.captures_to_hand()) / 2
                  +   3 * kingFlankAttack * kingFlankAttack / 8
                  +       mg_value(mobility[Them] - mobility[Us])
-                 - 873 * !(pos.major_pieces(Them) || pos.captures_to_hand() || pos.king_type() == WAZIR) / (1 + pos.check_counting() + pos.two_boards() + pos.makpong())
+                 - 873 * !(pos.major_pieces(Them) || pos.captures_to_hand() || (pos.king_type() == WAZIR && !pos.diagonal_lines()))
+                       / (1 + pos.check_counting() + pos.two_boards() + pos.makpong())
                  - 100 * bool(attackedBy[Us][KNIGHT] & attackedBy[Us][KING])
                  -   6 * mg_value(score) / 8
                  -   4 * kingFlankDefense
@@ -634,6 +653,19 @@ namespace {
         }
         score += make_score(200, 200) * popcount(attackedBy[Them][ALL_PIECES] & moves & ~pos.pieces());
         score += make_score(200, 220) * popcount(attackedBy[Them][ALL_PIECES] & moves & ~pos.pieces() & ~attackedBy2[Us]);
+    }
+
+    // Extinction threats
+    if (pos.extinction_value() == -VALUE_MATE)
+    {
+        Bitboard bExt = attackedBy[Us][ALL_PIECES] & pos.pieces(Them);
+        while (bExt)
+        {
+            PieceType pt = type_of(pos.piece_on(pop_lsb(&bExt)));
+            int denom = std::max(pos.count_with_hand(Them, pt) - pos.extinction_piece_count(), 1);
+            if (pos.extinction_piece_types().find(pt) != pos.extinction_piece_types().end())
+                score += make_score(1000, 1000) / (denom * denom);
+        }
     }
 
     // Non-pawn enemies

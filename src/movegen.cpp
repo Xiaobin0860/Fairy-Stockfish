@@ -268,6 +268,11 @@ namespace {
         // Xiangqi soldier
         if (pt == SOLDIER && pos.unpromoted_soldier(us, from))
             b1 &= file_bb(file_of(from));
+        if (pt == JANGGI_CANNON)
+        {
+            b1 &= ~pos.pieces(pt);
+            b1 &= attacks_bb(us, pt, from, pos.pieces() ^ pos.pieces(pt));
+        }
         PieceType prom_pt = pos.promoted_piece_type(pt);
         Bitboard b2 = prom_pt && (!pos.promotion_limit(prom_pt) || pos.promotion_limit(prom_pt) > pos.count(us, prom_pt)) ? b1 : Bitboard(0);
         Bitboard b3 = pos.piece_demotion() && pos.is_promoted(from) ? b1 : Bitboard(0);
@@ -341,6 +346,10 @@ namespace {
         while (b)
             moveList = make_move_and_gating<NORMAL>(pos, moveList, Us, ksq, pop_lsb(&b));
 
+        // Passing move by king
+        if (pos.king_pass())
+            *moveList++ = make<SPECIAL>(ksq, ksq);
+
         if (Type != CAPTURES && pos.can_castle(CastlingRights(OO | OOO)))
         {
             if (!pos.castling_impeded(OO) && pos.can_castle(OO))
@@ -381,6 +390,28 @@ namespace {
             Square to = from + 2 * (Us == WHITE ? NORTH : SOUTH);
             if (is_ok(to) && (target & to))
                 moveList = make_move_and_gating<SPECIAL>(pos, moveList, Us, from, to);
+        }
+    }
+
+    // Janggi palace moves
+    if (pos.diagonal_lines())
+    {
+        Bitboard diags = pos.pieces(Us) & pos.diagonal_lines();
+        while (diags)
+        {
+            Square from = pop_lsb(&diags);
+            PieceType pt = type_of(pos.piece_on(from));
+            PieceType movePt = pt == KING ? pos.king_type() : pt;
+            Bitboard b = 0;
+            PieceType diagType = movePt == WAZIR ? FERS : movePt == SOLDIER ? PAWN : movePt == ROOK ? BISHOP : NO_PIECE_TYPE;
+            if (diagType)
+                b |= attacks_bb(Us, diagType, from, pos.pieces());
+            else if (movePt == JANGGI_CANNON)
+                // TODO: fix for longer diagonals
+                b |= attacks_bb(Us, ALFIL, from, pos.pieces()) & ~attacks_bb(Us, ELEPHANT, from, pos.pieces() ^ pos.pieces(JANGGI_CANNON));
+            b &= pos.board_bb(Us, pt) & target & pos.diagonal_lines();
+            while (b)
+                moveList = make_move_and_gating<SPECIAL>(pos, moveList, Us, from, pop_lsb(&b));
         }
     }
 
@@ -463,8 +494,12 @@ ExtMove* generate<EVASIONS>(const Position& pos, ExtMove* moveList) {
   Bitboard sliderAttacks = 0;
   Bitboard sliders = pos.checkers();
 
+  // Passing move by king in bikjang
+  if (pos.bikjang() && pos.king_pass())
+      *moveList++ = make<SPECIAL>(ksq, ksq);
+
   // Consider all evasion moves for special pieces
-  if (sliders & (pos.pieces(CANNON, BANNER) | pos.pieces(HORSE, ELEPHANT)))
+  if (sliders & (pos.pieces(CANNON, BANNER) | pos.pieces(HORSE, ELEPHANT) | pos.pieces(JANGGI_CANNON, JANGGI_ELEPHANT)))
   {
       Bitboard target = pos.board_bb() & ~pos.pieces(us);
       Bitboard b = (  (pos.attacks_from(us, KING, ksq) & pos.pieces())
@@ -489,6 +524,21 @@ ExtMove* generate<EVASIONS>(const Position& pos, ExtMove* moveList) {
                 | (pos.moves_from(us, KING, ksq) & ~pos.pieces())) & ~pos.pieces(us) & ~sliderAttacks;
   while (b)
       moveList = make_move_and_gating<NORMAL>(pos, moveList, us, ksq, pop_lsb(&b));
+
+  // Janggi king palace moves
+  if (pos.diagonal_lines() & ksq)
+  {
+      PieceType movePt = pos.king_type();
+      PieceType diagType = movePt == WAZIR ? FERS : movePt == SOLDIER ? PAWN : movePt == ROOK ? BISHOP : NO_PIECE_TYPE;
+      if (diagType)
+      {
+          b = attacks_bb(us, diagType, ksq, pos.pieces()) & pos.board_bb(us, KING) & pos.diagonal_lines() & ~pos.pieces(us) & ~sliderAttacks;
+          if (!more_than_one(pos.checkers()))
+              b &= ~pos.checkers();
+          while (b)
+              moveList = make_move_and_gating<SPECIAL>(pos, moveList, us, ksq, pop_lsb(&b));
+      }
+  }
 
   if (more_than_one(pos.checkers()))
       return moveList; // Double check, only a king move can save the day
