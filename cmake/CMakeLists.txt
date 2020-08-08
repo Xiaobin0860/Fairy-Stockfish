@@ -38,12 +38,12 @@ endif()
 
 if(APPLE)
 
-foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
-   string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${ROOT}/\@bin)
-   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${ROOT}/\@lib)
-   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${ROOT}/\@lib)
-endforeach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
+# foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
+#    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+#    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${ROOT}/\@bin)
+#    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${ROOT}/\@lib)
+#    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${ROOT}/\@lib)
+# endforeach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
 
 set(CMAKE_XCODE_ATTRIBUTE_WARNING_CFLAGS "-Wno-int-conversion")
 
@@ -95,10 +95,59 @@ endif()
 # solution name
 project(stockfish)
 
-file(GLOB SRCS "${SRC_ROOT}/*.cpp")
-file(GLOB INCS "${SRC_ROOT}/*.h")
-file(GLOB syzygy_SRCS "${SRC_ROOT}/syzygy/*.cpp")
-file(GLOB syzygy_INCS "${SRC_ROOT}/syzygy/*.h")
+set(SRCS
+    ${SRC_ROOT}/benchmark.cpp
+    ${SRC_ROOT}/bitbase.cpp
+    ${SRC_ROOT}/bitboard.cpp
+    ${SRC_ROOT}/endgame.cpp
+    ${SRC_ROOT}/evaluate.cpp
+    ${SRC_ROOT}/main.cpp
+    ${SRC_ROOT}/material.cpp
+    ${SRC_ROOT}/misc.cpp
+    ${SRC_ROOT}/movegen.cpp
+    ${SRC_ROOT}/movepick.cpp
+    ${SRC_ROOT}/parser.cpp
+    ${SRC_ROOT}/partner.cpp
+    ${SRC_ROOT}/pawns.cpp
+    ${SRC_ROOT}/piece.cpp
+    ${SRC_ROOT}/position.cpp
+    ${SRC_ROOT}/psqt.cpp
+    ${SRC_ROOT}/search.cpp
+    ${SRC_ROOT}/thread.cpp
+    ${SRC_ROOT}/timeman.cpp
+    ${SRC_ROOT}/tt.cpp
+    ${SRC_ROOT}/uci.cpp
+    ${SRC_ROOT}/ucioption.cpp
+    ${SRC_ROOT}/variant.cpp
+    ${SRC_ROOT}/xboard.cpp
+)
+set(INCS
+    ${SRC_ROOT}/apiutil.h
+    ${SRC_ROOT}/bitboard.h
+    ${SRC_ROOT}/endgame.h
+    ${SRC_ROOT}/evaluate.h
+    ${SRC_ROOT}/magic.h
+    ${SRC_ROOT}/material.h
+    ${SRC_ROOT}/misc.h
+    ${SRC_ROOT}/movegen.h
+    ${SRC_ROOT}/movepick.h
+    ${SRC_ROOT}/parser.h
+    ${SRC_ROOT}/partner.h
+    ${SRC_ROOT}/pawns.h
+    ${SRC_ROOT}/piece.h
+    ${SRC_ROOT}/position.h
+    ${SRC_ROOT}/search.h
+    ${SRC_ROOT}/thread.h
+    ${SRC_ROOT}/thread_win32_osx.h
+    ${SRC_ROOT}/timeman.h
+    ${SRC_ROOT}/tt.h
+    ${SRC_ROOT}/types.h
+    ${SRC_ROOT}/uci.h
+    ${SRC_ROOT}/variant.h
+    ${SRC_ROOT}/xboard.h
+)
+set(syzygy_SRCS ${SRC_ROOT}/syzygy/tbprobe.cpp)
+set(syzygy_INCS ${SRC_ROOT}/syzygy/tbprobe.h)
 
 add_executable(stockfish
     ${SRCS} ${INCS}
