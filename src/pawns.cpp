@@ -68,7 +68,7 @@ namespace {
   template<Color Us>
   Score evaluate(const Position& pos, Pawns::Entry* e) {
 
-    constexpr Color     Them = (Us == WHITE ? BLACK : WHITE);
+    constexpr Color     Them = ~Us;
     constexpr Direction Up   = pawn_push(Us);
 
     Bitboard neighbours, stoppers, support, phalanx, opposed;
@@ -125,18 +125,20 @@ namespace {
                 || (   stoppers == blocked && r >= RANK_5
                     && (shift<Up>(support) & ~(theirPawns | doubleAttackThem)));
 
+        passed &= !(forward_file_bb(Us, s) & ourPawns);
+
         // Passed pawns will be properly scored later in evaluation when we have
         // full attack info.
         if (passed && is_ok(s + Up) && (r < pos.promotion_rank() || !pos.mandatory_pawn_promotion()))
             e->passedPawns[Us] |= s;
 
         // Score this pawn
-        if (support | phalanx)
+        if ((support | phalanx) && (r < pos.promotion_rank() || !pos.mandatory_pawn_promotion()))
         {
             int v =  Connected[r] * (2 + bool(phalanx) - bool(opposed)) * (r == RANK_2 && pos.captures_to_hand() ? 3 : 1)
                    + 21 * popcount(support);
             if (r >= RANK_4 && pos.count<PAWN>(Us) > popcount(pos.board_bb()) / 4)
-                v = std::max(v, popcount(support | phalanx) * 50) / (opposed ? 2 : 1);
+                v = popcount(support | phalanx) * 50 / (opposed ? 2 : 1);
 
             score += make_score(v, v * (r - 2) / 4);
         }
@@ -208,7 +210,7 @@ Entry* probe(const Position& pos) {
 template<Color Us>
 Score Entry::evaluate_shelter(const Position& pos, Square ksq) {
 
-  constexpr Color Them = (Us == WHITE ? BLACK : WHITE);
+  constexpr Color Them = ~Us;
 
   Bitboard b = pos.pieces(PAWN, SHOGI_PAWN) & ~forward_ranks_bb(Them, ksq);
   Bitboard ourPawns = b & pos.pieces(Us);
@@ -216,7 +218,7 @@ Score Entry::evaluate_shelter(const Position& pos, Square ksq) {
 
   Score bonus = make_score(5, 5);
 
-  File center = clamp(file_of(ksq), FILE_B, File(pos.max_file() - 1));
+  File center = Utility::clamp(file_of(ksq), FILE_B, File(pos.max_file() - 1));
   for (File f = File(center - 1); f <= File(center + 1); ++f)
   {
       b = ourPawns & file_bb(f);
@@ -225,7 +227,7 @@ Score Entry::evaluate_shelter(const Position& pos, Square ksq) {
       b = theirPawns & file_bb(f);
       int theirRank = b ? relative_rank(Us, frontmost_sq(Them, b), pos.max_rank()) : 0;
 
-      int d = std::min(std::min(f, File(pos.max_file() - f)), FILE_D);
+      int d = std::min(edge_distance(f, pos.max_file()), FILE_D);
       bonus += make_score(ShelterStrength[d][ourRank], 0) * (1 + (pos.captures_to_hand() && ourRank <= RANK_2)
                                                                + (pos.check_counting() && d == 0 && ourRank == RANK_2));
 

@@ -5,3 +5,6 @@ stockfish
 @lib
 build
 .vscode
+tests/js/node_modules
+ffish.js
+*.wasm
