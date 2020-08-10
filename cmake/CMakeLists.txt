@@ -116,6 +116,7 @@ set(SRCS
     ${SRC_ROOT}/thread.cpp
     ${SRC_ROOT}/timeman.cpp
     ${SRC_ROOT}/tt.cpp
+    ${SRC_ROOT}/tune.cpp
     ${SRC_ROOT}/uci.cpp
     ${SRC_ROOT}/ucioption.cpp
     ${SRC_ROOT}/variant.cpp
@@ -141,6 +142,7 @@ set(INCS
     ${SRC_ROOT}/thread_win32_osx.h
     ${SRC_ROOT}/timeman.h
     ${SRC_ROOT}/tt.h
+    ${SRC_ROOT}/tune.h
     ${SRC_ROOT}/types.h
     ${SRC_ROOT}/uci.h
     ${SRC_ROOT}/variant.h
